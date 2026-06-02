@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Мой список аниме</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            padding-bottom: 70px;
+        }
+        
+        /* Вкладки */
+        .tabs {
+            display: flex;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-top: 1px solid var(--tg-theme-hint-color, #cccccc);
+            padding: 8px 0;
+            justify-content: space-around;
+            z-index: 100;
+        }
+        
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            color: var(--tg-theme-hint-color, #666666);
+            transition: all 0.2s;
+            border-radius: 8px;
+        }
+        
+        .tab-btn.active {
+            color: var(--tg-theme-button-color, #2481cc);
+            font-weight: bold;
+        }
+        
+        /* Контент вкладок */
+        .tab-content {
+            display: none;
+            padding: 16px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Карточки аниме */
+        .anime-card {
+            background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .anime-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .anime-status {
+            font-size: 12px;
+            color: var(--tg-theme-hint-color, #666);
+            margin-bottom: 8px;
+        }
+        
+        button {
+            background: var(--tg-theme-button-color, #2481cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-right: 8px;
+            margin-top: 8px;
+        }
+        
+        .add-form {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        input, textarea {
+            flex: 1;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid var(--tg-theme-hint-color, #ccc);
+            background: var(--tg-theme-bg-color, #fff);
+            color: var(--tg-theme-text-color, #000);
+        }
+        
+        h2 {
+            margin-bottom: 16px;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Вкладки -->
+<div class="tabs">
+    <button class="tab-btn active" data-tab="plan">📋 В планах</button>
+    <button class="tab-btn" data-tab="watching">🎬 Смотрю</button>
+    <button class="tab-btn" data-tab="completed">✅ Просмотрено</button>
+    <button class="tab-btn" data-tab="add">➕ Добавить</button>
+</div>
+
+<!-- Вкладка: В планах -->
+<div id="plan" class="tab-content active">
+    <h2>📋 Хочу посмотреть</h2>
+    <div id="plan-list"></div>
+</div>
+
+<!-- Вкладка: Смотрю -->
+<div id="watching" class="tab-content">
+    <h2>🎬 Смотрю сейчас</h2>
+    <div id="watching-list"></div>
+</div>
+
+<!-- Вкладка: Просмотрено -->
+<div id="completed" class="tab-content">
+    <h2>✅ Просмотренные</h2>
+    <div id="completed-list"></div>
+</div>
+
+<!-- Вкладка: Добавить -->
+<div id="add" class="tab-content">
+    <h2>➕ Добавить аниме</h2>
+    <div class="add-form">
+        <input type="text" id="anime-name" placeholder="Название аниме">
+        <button id="submit-add">Добавить</button>
+    </div>
+</div>
+
+<script src="https://telegram.org/js/telegram-web-app.js?56"></script>
+<script>
+    // Инициализация Telegram Web App
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand(); // Растянуть на всё окно
+    
+    // Переключение вкладок
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabId = btn.dataset.tab;
+            
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+        });
+    });
+    
+    // Загрузка данных из CloudStorage Telegram
+    async function loadAnimeList() {
+        try {
+            const data = await tg.CloudStorage.getItem('anime_list');
+            return data ? JSON.parse(data) : { plan: [], watching: [], completed: [] };
+        } catch(e) {
+            return { plan: [], watching: [], completed: [] };
+        }
+    }
+    
+    // Сохранение данных
+    async function saveAnimeList(data) {
+        await tg.CloudStorage.setItem('anime_list', JSON.stringify(data));
+        renderAllLists();
+    }
+    
+    // Отображение списков
+    async function renderAllLists() {
+        const data = await loadAnimeList();
+        
+        // В планах
+        const planDiv = document.getElementById('plan-list');
+        if (data.plan.length === 0) {
+            planDiv.innerHTML = '<p>Пока ничего не добавлено. Нажми "➕ Добавить"</p>';
+        } else {
+            planDiv.innerHTML = data.plan.map((anime, i) => `
+                <div class="anime-card">
+                    <div class="anime-title">${escapeHtml(anime.title)}</div>
+                    <div class="anime-status">Добавлено: ${anime.date}</div>
+                    <button onclick="moveToWatching(${i})">🎬 Начать смотреть</button>
+                    <button onclick="deleteAnime('plan', ${i})">🗑 Удалить</button>
+                </div>
+            `).join('');
+        }
+        
+        // Смотрю
+        const watchingDiv = document.getElementById('watching-list');
+        if (data.watching.length === 0) {
+            watchingDiv.innerHTML = '<p>Нет аниме в процессе просмотра</p>';
+        } else {
+            watchingDiv.innerHTML = data.watching.map((anime, i) => `
+                <div class="anime-card">
+                    <div class="anime-title">${escapeHtml(anime.title)}</div>
+                    <div class="anime-status">Начато: ${anime.startDate || anime.date}</div>
+                    <button onclick="completeAnime(${i})">✅ Завершить</button>
+                    <button onclick="deleteAnime('watching', ${i})">🗑 Удалить</button>
+                </div>
+            `).join('');
+        }
+        
+        // Просмотрено
+        const completedDiv = document.getElementById('completed-list');
+        if (data.completed.length === 0) {
+            completedDiv.innerHTML = '<p>Здесь появятся аниме, которые ты посмотрел</p>';
+        } else {
+            completedDiv.innerHTML = data.completed.map((anime, i) => `
+                <div class="anime-card">
+                    <div class="anime-title">${escapeHtml(anime.title)}</div>
+                    <div>⭐ ${anime.rating || '?'}/10</div>
+                    <div>💭 ${anime.review || 'Без отзыва'}</div>
+                    <div class="anime-status">Завершено: ${anime.completedDate || anime.date}</div>
+                </div>
+            `).join('');
+        }
+    }
+    
+    // Добавление аниме
+    document.getElementById('submit-add').addEventListener('click', async () => {
+        const nameInput = document.getElementById('anime-name');
+        const title = nameInput.value.trim();
+        
+        if (!title) {
+            tg.showAlert('Введи название аниме!');
+            return;
+        }
+        
+        const data = await loadAnimeList();
+        data.plan.push({
+            title: title,
+            date: new Date().toLocaleDateString('ru-RU')
+        });
+        
+        await saveAnimeList(data);
+        nameInput.value = '';
+        tg.showAlert(`✅ "${title}" добавлено в список!`);
+        
+        // Переключиться на вкладку "В планах"
+        document.querySelector('[data-tab="plan"]').click();
+    });
+    
+    // Функции перемещения
+    window.moveToWatching = async (index) => {
+        const data = await loadAnimeList();
+        const anime = data.plan[index];
+        data.watching.push({ ...anime, startDate: new Date().toLocaleDateString('ru-RU') });
+        data.plan.splice(index, 1);
+        await saveAnimeList(data);
+    };
+    
+    window.completeAnime = async (index) => {
+        const data = await loadAnimeList();
+        const anime = data.watching[index];
+        
+        // Запрос оценки
+        let rating = prompt('Оцени аниме от 1 до 10:', '8');
+        while (rating && (isNaN(rating) || rating < 1 || rating > 10)) {
+            rating = prompt('Оценка должна быть от 1 до 10. Введи число:', '8');
+        }
+        
+        const review = prompt('Напиши своё мнение об этом аниме (можно кратко):', '');
+        
+        data.completed.push({
+            ...anime,
+            rating: rating || '?',
+            review: review || 'Без отзыва',
+            completedDate: new Date().toLocaleDateString('ru-RU')
+        });
+        data.watching.splice(index, 1);
+        await saveAnimeList(data);
+        
+        tg.showAlert('✅ Аниме добавлено в просмотренные!');
+    };
+    
+    window.deleteAnime = async (list, index) => {
+        const data = await loadAnimeList();
+        data[list].splice(index, 1);
+        await saveAnimeList(data);
+        tg.showAlert('🗑 Удалено из списка');
+    };
+    
+    function escapeHtml(str) {
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    // Загрузка при старте
+    renderAllLists();
+</script>
+</body>
+</html>
