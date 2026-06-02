@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>AniTrack</title>
+    <title>AniTrack — список аниме</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -98,6 +98,7 @@
             border-radius: 16px;
             padding: 14px;
             margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
         .anime-title { font-size: 16px; font-weight: bold; margin-bottom: 6px; }
@@ -111,8 +112,14 @@
             font-weight: bold;
             margin-bottom: 8px;
         }
+        .anime-review {
+            font-size: 13px;
+            color: #555;
+            margin: 8px 0;
+            font-style: italic;
+        }
 
-        .card-buttons { display: flex; gap: 8px; margin-top: 10px; }
+        .card-buttons { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
         .card-buttons button {
             padding: 6px 14px;
             border-radius: 20px;
@@ -143,6 +150,54 @@
             pointer-events: none;
         }
         .toast.error { background: #ff4757; }
+        
+        .search-container { padding: 0 16px 16px; }
+        .search-box {
+            background: var(--tg-theme-secondary-bg-color, white);
+            border-radius: 12px;
+            display: flex;
+            gap: 8px;
+            padding: 8px;
+        }
+        .search-box input {
+            flex: 1;
+            padding: 10px 12px;
+            border: none;
+            border-radius: 10px;
+            background: var(--tg-theme-bg-color, #f0f0f0);
+            font-size: 15px;
+            outline: none;
+        }
+        .search-box button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 0 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .search-results { padding: 0 16px; margin-bottom: 16px; max-height: 300px; overflow-y: auto; }
+        .search-result-item {
+            background: var(--tg-theme-secondary-bg-color, white);
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            gap: 12px;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .search-result-img {
+            width: 45px;
+            height: 65px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            object-fit: cover;
+        }
+        .search-result-title { font-weight: bold; font-size: 14px; margin-bottom: 4px; }
+        .search-result-year { font-size: 11px; color: #666; }
+        .loading { text-align: center; padding: 20px; color: #667eea; }
     </style>
 </head>
 <body>
@@ -152,9 +207,18 @@
     <p>Твой аниме-трекер</p>
 </div>
 
+<div class="search-container">
+    <div class="search-box">
+        <input type="text" id="search-input" placeholder="🔍 Поиск аниме (Наруто, Атака Титанов...)">
+        <button id="search-btn">Найти</button>
+    </div>
+</div>
+
+<div id="search-results" class="search-results"></div>
+
 <div class="add-section">
     <div class="add-box">
-        <input type="text" id="anime-name" placeholder="Введи название аниме...">
+        <input type="text" id="anime-name" placeholder="Или введи название вручную...">
         <button id="add-btn">➕ Добавить</button>
     </div>
 </div>
@@ -171,14 +235,8 @@
 
 <div id="toast" class="toast"></div>
 
-<script src="https://telegram.org/js/telegram-web-app.js?56"></script>
 <script>
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand();
-    
-    let userId = tg.initDataUnsafe?.user?.id || 'anonymous';
-    
+    // Используем localStorage вместо CloudStorage
     function showToast(text, isError = false) {
         const toast = document.getElementById('toast');
         toast.textContent = text;
@@ -187,29 +245,56 @@
         setTimeout(() => toast.style.opacity = '0', 1500);
     }
     
-    async function loadData() {
+    function loadData() {
         try {
-            const key = `anime_list_${userId}`;
-            const raw = await tg.CloudStorage.getItem(key);
-            if (raw) return JSON.parse(raw);
-        } catch(e) { console.log('load error', e); }
+            const raw = localStorage.getItem('anime_list');
+            if (raw) {
+                return JSON.parse(raw);
+            }
+        } catch(e) {}
         return { plan: [], watching: [], completed: [] };
     }
     
-    async function saveData(data) {
+    function saveData(data) {
         try {
-            const key = `anime_list_${userId}`;
-            await tg.CloudStorage.setItem(key, JSON.stringify(data));
-            await renderLists();
+            localStorage.setItem('anime_list', JSON.stringify(data));
+            renderLists();
             return true;
         } catch(e) {
-            console.log('save error', e);
-            showToast('Ошибка сохранения: ' + e.message, true);
+            showToast('Ошибка сохранения', true);
             return false;
         }
     }
     
-    async function addAnime() {
+    // Добавление из поиска
+    async function addAnimeFromSearch(animeData) {
+        const title = animeData.russian || animeData.name;
+        if (!title) return;
+        
+        const data = loadData();
+        
+        const exists = [...data.plan, ...data.watching, ...data.completed].some(a => a.title === title);
+        if (exists) {
+            showToast(`❌ "${title}" уже в списке`, true);
+            return;
+        }
+        
+        data.plan.push({
+            id: Date.now(),
+            title: title,
+            image: animeData.image?.preview || null,
+            addedDate: new Date().toLocaleString('ru-RU')
+        });
+        
+        saveData(data);
+        showToast(`✅ "${title}" добавлено!`);
+        document.getElementById('search-input').value = '';
+        document.getElementById('search-results').innerHTML = '';
+        document.querySelector('[data-tab="plan"]').click();
+    }
+    
+    // Ручное добавление
+    function addAnimeManual() {
         const input = document.getElementById('anime-name');
         const title = input.value.trim();
         
@@ -218,9 +303,8 @@
             return;
         }
         
-        const data = await loadData();
+        const data = loadData();
         
-        // Проверка на дубликат
         const exists = [...data.plan, ...data.watching, ...data.completed].some(a => a.title === title);
         if (exists) {
             showToast(`❌ "${title}" уже есть!`, true);
@@ -233,22 +317,61 @@
             addedDate: new Date().toLocaleString('ru-RU')
         });
         
-        await saveData(data);
+        saveData(data);
         input.value = '';
         showToast(`✅ "${title}" добавлено!`);
-        
-        // Переключаемся на вкладку "В планах"
         document.querySelector('[data-tab="plan"]').click();
     }
     
-    async function renderLists() {
-        const data = await loadData();
-        console.log('Рендерим списки:', data);
+    // Поиск через Shikimori
+    async function searchAnime() {
+        const query = document.getElementById('search-input').value.trim();
+        if (!query) {
+            showToast('Введи название', true);
+            return;
+        }
+        
+        const resultsDiv = document.getElementById('search-results');
+        resultsDiv.innerHTML = '<div class="loading">🔍 Ищем...</div>';
+        
+        try {
+            const url = `https://shikimori.one/api/animes?search=${encodeURIComponent(query)}&limit=8`;
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (!data || data.length === 0) {
+                resultsDiv.innerHTML = '<div class="loading">😔 Ничего не найдено</div>';
+                return;
+            }
+            
+            resultsDiv.innerHTML = data.map(anime => {
+                const title = anime.russian || anime.name;
+                const imgUrl = anime.image?.preview;
+                return `
+                    <div class="search-result-item" onclick='addAnimeFromSearch(${JSON.stringify(anime)})'>
+                        ${imgUrl ? `<img class="search-result-img" src="${imgUrl}" onerror="this.style.display='none'">` : '<div class="search-result-img" style="display:flex;align-items:center;justify-content:center;">🎬</div>'}
+                        <div class="search-result-info">
+                            <div class="search-result-title">${escapeHtml(title)}</div>
+                            <div class="search-result-year">${anime.kind || '?'} • ${anime.episodes || '?'} серий • ★ ${anime.score || '?'}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+        } catch(e) {
+            resultsDiv.innerHTML = '<div class="loading">⚠️ Ошибка поиска</div>';
+            showToast('Ошибка поиска', true);
+        }
+    }
+    
+    // Отображение списков
+    function renderLists() {
+        const data = loadData();
         
         // В планах
         const planDiv = document.getElementById('plan-list');
         if (data.plan.length === 0) {
-            planDiv.innerHTML = '<div class="empty-state"><span>📭</span><br>Нет аниме в планах<br>Добавь выше!</div>';
+            planDiv.innerHTML = '<div class="empty-state"><span>📭</span><br>Нет аниме в планах</div>';
         } else {
             planDiv.innerHTML = data.plan.map((item, idx) => `
                 <div class="anime-card">
@@ -298,17 +421,18 @@
         }
     }
     
-    window.moveToWatching = async (idx) => {
-        const data = await loadData();
+    // Действия
+    window.moveToWatching = function(idx) {
+        const data = loadData();
         const anime = data.plan[idx];
         data.watching.push({ ...anime, startDate: new Date().toLocaleString('ru-RU') });
         data.plan.splice(idx, 1);
-        await saveData(data);
+        saveData(data);
         showToast(`🎬 "${anime.title}" — в процессе!`);
     };
     
-    window.completeAnime = async (idx) => {
-        const data = await loadData();
+    window.completeAnime = function(idx) {
+        const data = loadData();
         const anime = data.watching[idx];
         
         let rating = prompt('⭐ Оценка от 1 до 10:', '8');
@@ -325,21 +449,26 @@
             completedDate: new Date().toLocaleString('ru-RU')
         });
         data.watching.splice(idx, 1);
-        await saveData(data);
+        saveData(data);
         showToast(`✅ "${anime.title}" в просмотренных!`);
     };
     
-    window.deleteAnime = async (list, idx) => {
-        const data = await loadData();
+    window.deleteAnime = function(list, idx) {
+        const data = loadData();
         const title = data[list][idx].title;
         data[list].splice(idx, 1);
-        await saveData(data);
+        saveData(data);
         showToast(`🗑 "${title}" удалено`);
     };
     
-    document.getElementById('add-btn').addEventListener('click', addAnime);
+    // Обработчики
+    document.getElementById('add-btn').addEventListener('click', addAnimeManual);
+    document.getElementById('search-btn').addEventListener('click', searchAnime);
     document.getElementById('anime-name').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') addAnime();
+        if (e.key === 'Enter') addAnimeManual();
+    });
+    document.getElementById('search-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') searchAnime();
     });
     
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -362,8 +491,10 @@
         });
     }
     
+    window.addAnimeFromSearch = addAnimeFromSearch;
+    
     renderLists();
-    showToast('✏️ Введи название и нажми Добавить');
+    showToast('🎬 Добро пожаловать! Найди аниме через поиск');
 </script>
 </body>
 </html>
