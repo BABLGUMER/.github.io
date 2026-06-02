@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>AniTrack</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h2 { margin-bottom: 12px; color: #333; }
+        input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+        }
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 12px;
+            border-radius: 12px;
+            margin-top: 12px;
+            display: none;
+        }
+        .success.show { display: block; }
+        .list-item {
+            background: #f0f0f0;
+            padding: 12px;
+            border-radius: 12px;
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .delete-btn {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            width: auto;
+        }
+        .empty {
+            color: #999;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>🎬 AniTrack</h2>
+    <p>Твой список аниме</p>
+</div>
+
+<div class="card">
+    <input type="text" id="animeName" placeholder="Введи название аниме...">
+    <button id="addBtn">➕ Добавить</button>
+    <div id="message" class="success"></div>
+</div>
+
+<div class="card">
+    <h3>📋 Мой список</h3>
+    <div id="listContainer"></div>
+</div>
+
+<script>
+    // Данные хранятся в памяти браузера (localStorage)
+    let animeList = [];
+    
+    // Загрузка при старте
+    function loadData() {
+        const saved = localStorage.getItem('anime_list_simple');
+        if (saved) {
+            animeList = JSON.parse(saved);
+        }
+        renderList();
+    }
+    
+    // Сохранение
+    function saveData() {
+        localStorage.setItem('anime_list_simple', JSON.stringify(animeList));
+    }
+    
+    // Показать сообщение
+    function showMessage(text, isError = false) {
+        const msgDiv = document.getElementById('message');
+        msgDiv.textContent = text;
+        msgDiv.style.background = isError ? '#ffebee' : '#e8f5e9';
+        msgDiv.style.color = isError ? '#c62828' : '#2e7d32';
+        msgDiv.classList.add('show');
+        setTimeout(() => {
+            msgDiv.classList.remove('show');
+        }, 2000);
+    }
+    
+    // Добавить аниме
+    function addAnime() {
+        const input = document.getElementById('animeName');
+        const title = input.value.trim();
+        
+        if (!title) {
+            showMessage('❌ Введи название!', true);
+            return;
+        }
+        
+        // Проверка на дубликат
+        if (animeList.some(a => a.title === title)) {
+            showMessage(`❌ "${title}" уже есть в списке!`, true);
+            return;
+        }
+        
+        animeList.push({
+            id: Date.now(),
+            title: title,
+            date: new Date().toLocaleString('ru-RU')
+        });
+        
+        saveData();
+        renderList();
+        input.value = '';
+        showMessage(`✅ "${title}" добавлено!`);
+    }
+    
+    // Удалить аниме
+    function deleteAnime(id) {
+        const anime = animeList.find(a => a.id === id);
+        animeList = animeList.filter(a => a.id !== id);
+        saveData();
+        renderList();
+        showMessage(`🗑 "${anime.title}" удалено`);
+    }
+    
+    // Отобразить список
+    function renderList() {
+        const container = document.getElementById('listContainer');
+        
+        if (animeList.length === 0) {
+            container.innerHTML = '<div class="empty">📭 Пока ничего нет. Добавь аниме!</div>';
+            return;
+        }
+        
+        container.innerHTML = animeList.map(anime => `
+            <div class="list-item">
+                <div>
+                    <strong>${escapeHtml(anime.title)}</strong>
+                    <br><small>✅ Добавлено: ${anime.date}</small>
+                </div>
+                <button class="delete-btn" onclick="deleteAnime(${anime.id})">🗑</button>
+            </div>
+        `).join('');
+    }
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    // Подключаем кнопки
+    document.getElementById('addBtn').addEventListener('click', addAnime);
+    document.getElementById('animeName').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') addAnime();
+    });
+    
+    // Делаем функцию глобальной для onclick
+    window.deleteAnime = deleteAnime;
+    
+    // Запуск
+    loadData();
+    console.log('Приложение запущено!');
+</script>
+</body>
+</html>
