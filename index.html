@@ -3,16 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>AniTrack — список аниме</title>
+    <title>AniTrack</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: system-ui, -apple-system, sans-serif;
             background: var(--tg-theme-bg-color, #f5f5f5);
             color: var(--tg-theme-text-color, #1a1a1a);
             padding-bottom: 75px;
@@ -25,31 +21,22 @@
             margin-bottom: 16px;
         }
 
-        .header h1 {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
+        .header h1 { font-size: 24px; margin-bottom: 4px; }
+        .header p { font-size: 13px; opacity: 0.9; }
 
-        .header p {
-            font-size: 13px;
-            opacity: 0.9;
-        }
-
-        .search-container {
+        .add-section {
             padding: 0 16px 16px;
         }
 
-        .search-box {
+        .add-box {
             background: var(--tg-theme-secondary-bg-color, white);
             border-radius: 12px;
             display: flex;
             gap: 8px;
             padding: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
-        .search-box input {
+        .add-box input {
             flex: 1;
             padding: 10px 12px;
             border: none;
@@ -60,7 +47,7 @@
             outline: none;
         }
 
-        .search-box button {
+        .add-box button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
             padding: 0 20px;
@@ -68,51 +55,6 @@
             color: white;
             font-weight: 600;
             cursor: pointer;
-        }
-
-        .search-results {
-            padding: 0 16px;
-            margin-bottom: 16px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .search-result-item {
-            background: var(--tg-theme-secondary-bg-color, white);
-            border-radius: 12px;
-            padding: 10px;
-            margin-bottom: 8px;
-            display: flex;
-            gap: 12px;
-            cursor: pointer;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        .search-result-item:active {
-            transform: scale(0.98);
-        }
-
-        .search-result-img {
-            width: 45px;
-            height: 65px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 8px;
-            object-fit: cover;
-        }
-
-        .search-result-info {
-            flex: 1;
-        }
-
-        .search-result-title {
-            font-weight: bold;
-            font-size: 14px;
-            margin-bottom: 4px;
-        }
-
-        .search-result-year {
-            font-size: 11px;
-            color: var(--tg-theme-hint-color, #666);
         }
 
         .tabs {
@@ -123,10 +65,9 @@
             right: 0;
             background: var(--tg-theme-secondary-bg-color, rgba(255,255,255,0.95));
             backdrop-filter: blur(10px);
-            border-top: 1px solid var(--tg-theme-hint-color, rgba(0,0,0,0.1));
+            border-top: 1px solid rgba(0,0,0,0.1);
             padding: 8px 0 12px;
             justify-content: space-around;
-            z-index: 100;
         }
 
         .tab-btn {
@@ -135,7 +76,7 @@
             padding: 8px 16px;
             font-size: 13px;
             cursor: pointer;
-            color: var(--tg-theme-hint-color, #666);
+            color: #666;
             border-radius: 20px;
             display: flex;
             flex-direction: column;
@@ -148,43 +89,22 @@
             background: rgba(102, 126, 234, 0.1);
         }
 
-        .tab-icon {
-            font-size: 22px;
-        }
-
-        .tab-content {
-            display: none;
-            padding: 0 16px 80px;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
+        .tab-icon { font-size: 22px; }
+        .tab-content { display: none; padding: 0 16px 80px; }
+        .tab-content.active { display: block; }
 
         .anime-card {
             background: var(--tg-theme-secondary-bg-color, white);
             border-radius: 16px;
             padding: 14px;
             margin-bottom: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
-        .anime-title {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 6px;
-        }
-
-        .anime-status {
-            font-size: 11px;
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-
+        .anime-title { font-size: 16px; font-weight: bold; margin-bottom: 6px; }
+        .anime-status { font-size: 11px; color: #667eea; margin-bottom: 10px; }
         .anime-rating {
             display: inline-block;
             background: #ffd700;
-            color: #1a1a1a;
             padding: 2px 8px;
             border-radius: 20px;
             font-size: 12px;
@@ -192,52 +112,20 @@
             margin-bottom: 8px;
         }
 
-        .anime-review {
-            font-size: 13px;
-            color: var(--tg-theme-hint-color, #555);
-            margin: 8px 0;
-            font-style: italic;
-        }
-
-        .card-buttons {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
-            flex-wrap: wrap;
-        }
-
+        .card-buttons { display: flex; gap: 8px; margin-top: 10px; }
         .card-buttons button {
             padding: 6px 14px;
             border-radius: 20px;
             font-size: 12px;
-            font-weight: 500;
             border: none;
             cursor: pointer;
         }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-danger { background: #ff4757; color: white; }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
+        .empty-state { text-align: center; padding: 50px 20px; color: #888; }
+        .empty-state span { font-size: 48px; display: block; margin-bottom: 12px; }
 
-        .btn-danger {
-            background: #ff4757;
-            color: white;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 50px 20px;
-            color: var(--tg-theme-hint-color, #888);
-        }
-
-        .empty-state span {
-            font-size: 48px;
-            display: block;
-            margin-bottom: 12px;
-        }
-
-        /* Всплывающее уведомление */
         .toast {
             position: fixed;
             bottom: 90px;
@@ -249,66 +137,37 @@
             border-radius: 12px;
             text-align: center;
             font-size: 14px;
-            font-weight: 500;
             z-index: 200;
             opacity: 0;
             transition: opacity 0.3s;
             pointer-events: none;
         }
-
-        .toast.error {
-            background: #ff4757;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #667eea;
-        }
+        .toast.error { background: #ff4757; }
     </style>
 </head>
 <body>
 
 <div class="header">
     <h1>🎬 AniTrack</h1>
-    <p>Твой персональный аниме-трекер</p>
+    <p>Твой аниме-трекер</p>
 </div>
 
-<div class="search-container">
-    <div class="search-box">
-        <input type="text" id="search-input" placeholder="🔍 Название аниме (Наруто, Атака Титанов...)">
-        <button id="search-btn">Найти</button>
+<div class="add-section">
+    <div class="add-box">
+        <input type="text" id="anime-name" placeholder="Введи название аниме...">
+        <button id="add-btn">➕ Добавить</button>
     </div>
 </div>
 
-<div id="search-results" class="search-results"></div>
-
 <div class="tabs">
-    <button class="tab-btn active" data-tab="plan">
-        <span class="tab-icon">📋</span>
-        <span>В планах</span>
-    </button>
-    <button class="tab-btn" data-tab="watching">
-        <span class="tab-icon">🎬</span>
-        <span>Смотрю</span>
-    </button>
-    <button class="tab-btn" data-tab="completed">
-        <span class="tab-icon">✅</span>
-        <span>Просмотрено</span>
-    </button>
+    <button class="tab-btn active" data-tab="plan"><span class="tab-icon">📋</span><span>В планах</span></button>
+    <button class="tab-btn" data-tab="watching"><span class="tab-icon">🎬</span><span>Смотрю</span></button>
+    <button class="tab-btn" data-tab="completed"><span class="tab-icon">✅</span><span>Просмотрено</span></button>
 </div>
 
-<div id="plan" class="tab-content active">
-    <div id="plan-list"></div>
-</div>
-
-<div id="watching" class="tab-content">
-    <div id="watching-list"></div>
-</div>
-
-<div id="completed" class="tab-content">
-    <div id="completed-list"></div>
-</div>
+<div id="plan" class="tab-content active"><div id="plan-list"></div></div>
+<div id="watching" class="tab-content"><div id="watching-list"></div></div>
+<div id="completed" class="tab-content"><div id="completed-list"></div></div>
 
 <div id="toast" class="toast"></div>
 
@@ -318,130 +177,86 @@
     tg.ready();
     tg.expand();
     
-    // Показ уведомления (исчезает через 1.5 секунды)
+    let userId = tg.initDataUnsafe?.user?.id || 'anonymous';
+    
     function showToast(text, isError = false) {
         const toast = document.getElementById('toast');
         toast.textContent = text;
         toast.className = isError ? 'toast error' : 'toast';
         toast.style.opacity = '1';
-        setTimeout(() => {
-            toast.style.opacity = '0';
-        }, 1500);
+        setTimeout(() => toast.style.opacity = '0', 1500);
     }
     
-    // Загрузка данных
     async function loadData() {
         try {
-            const raw = await tg.CloudStorage.getItem('anime_list');
-            if (raw) {
-                return JSON.parse(raw);
-            }
-        } catch(e) {}
+            const key = `anime_list_${userId}`;
+            const raw = await tg.CloudStorage.getItem(key);
+            if (raw) return JSON.parse(raw);
+        } catch(e) { console.log('load error', e); }
         return { plan: [], watching: [], completed: [] };
     }
     
-    // Сохранение
     async function saveData(data) {
         try {
-            await tg.CloudStorage.setItem('anime_list', JSON.stringify(data));
-            renderLists();
+            const key = `anime_list_${userId}`;
+            await tg.CloudStorage.setItem(key, JSON.stringify(data));
+            await renderLists();
+            return true;
         } catch(e) {
-            showToast('Ошибка сохранения', true);
+            console.log('save error', e);
+            showToast('Ошибка сохранения: ' + e.message, true);
+            return false;
         }
     }
     
-    // Добавление аниме
-    async function addAnime(animeData) {
-        const title = animeData.russian || animeData.name;
-        if (!title) return false;
+    async function addAnime() {
+        const input = document.getElementById('anime-name');
+        const title = input.value.trim();
+        
+        if (!title) {
+            showToast('Введи название аниме!', true);
+            return;
+        }
         
         const data = await loadData();
         
         // Проверка на дубликат
         const exists = [...data.plan, ...data.watching, ...data.completed].some(a => a.title === title);
         if (exists) {
-            showToast(`❌ "${title}" уже в списке`, true);
-            return false;
+            showToast(`❌ "${title}" уже есть!`, true);
+            return;
         }
         
         data.plan.push({
             id: Date.now(),
             title: title,
-            originalTitle: animeData.name,
-            image: animeData.image?.preview || null,
-            kind: animeData.kind,
-            episodes: animeData.episodes,
-            score: animeData.score,
             addedDate: new Date().toLocaleString('ru-RU')
         });
         
         await saveData(data);
-        showToast(`✅ "${title}" добавлено в "В планах"!`);
+        input.value = '';
+        showToast(`✅ "${title}" добавлено!`);
         
-        // Очищаем поиск
-        document.getElementById('search-input').value = '';
-        document.getElementById('search-results').innerHTML = '';
-        
-        return true;
+        // Переключаемся на вкладку "В планах"
+        document.querySelector('[data-tab="plan"]').click();
     }
     
-    // Поиск
-    async function doSearch() {
-        const query = document.getElementById('search-input').value.trim();
-        if (!query) {
-            showToast('Введи название аниме', true);
-            return;
-        }
-        
-        const resultsDiv = document.getElementById('search-results');
-        resultsDiv.innerHTML = '<div class="loading">🔍 Ищем...</div>';
-        
-        try {
-            const url = `https://shikimori.one/api/animes?search=${encodeURIComponent(query)}&limit=10`;
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            if (!data || data.length === 0) {
-                resultsDiv.innerHTML = '<div class="loading">😔 Ничего не найдено</div>';
-                return;
-            }
-            
-            resultsDiv.innerHTML = data.map(anime => {
-                const title = anime.russian || anime.name;
-                const imgUrl = anime.image?.preview;
-                return `
-                    <div class="search-result-item" onclick='addAnime(${JSON.stringify(anime)})'>
-                        ${imgUrl ? `<img class="search-result-img" src="${imgUrl}" onerror="this.style.display='none'">` : '<div class="search-result-img" style="display:flex;align-items:center;justify-content:center;">🎬</div>'}
-                        <div class="search-result-info">
-                            <div class="search-result-title">${escapeHtml(title)}</div>
-                            <div class="search-result-year">${anime.kind || '?'} • ${anime.episodes || '?'} серий • ★ ${anime.score || '?'}</div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-        } catch(e) {
-            resultsDiv.innerHTML = '<div class="loading">⚠️ Ошибка поиска</div>';
-            showToast('Ошибка поиска', true);
-        }
-    }
-    
-    // Отображение списков
     async function renderLists() {
         const data = await loadData();
+        console.log('Рендерим списки:', data);
         
         // В планах
         const planDiv = document.getElementById('plan-list');
         if (data.plan.length === 0) {
-            planDiv.innerHTML = '<div class="empty-state"><span>📭</span><br>Нет аниме в планах<br>🔍 Найди аниме через поиск</div>';
+            planDiv.innerHTML = '<div class="empty-state"><span>📭</span><br>Нет аниме в планах<br>Добавь выше!</div>';
         } else {
-            planDiv.innerHTML = data.plan.map((item) => `
-                <div class="anime-card" data-id="${item.id}">
+            planDiv.innerHTML = data.plan.map((item, idx) => `
+                <div class="anime-card">
                     <div class="anime-title">${escapeHtml(item.title)}</div>
                     <div class="anime-status">📅 Добавлено: ${item.addedDate}</div>
                     <div class="card-buttons">
-                        <button class="btn-primary" onclick="moveToWatching(${item.id})">🎬 Начать смотреть</button>
-                        <button class="btn-danger" onclick="deleteAnime('plan', ${item.id})">🗑 Удалить</button>
+                        <button class="btn-primary" onclick="moveToWatching(${idx})">🎬 Начать</button>
+                        <button class="btn-danger" onclick="deleteAnime('plan', ${idx})">🗑 Удалить</button>
                     </div>
                 </div>
             `).join('');
@@ -452,13 +267,13 @@
         if (data.watching.length === 0) {
             watchingDiv.innerHTML = '<div class="empty-state"><span>🎬</span><br>Нет аниме в процессе</div>';
         } else {
-            watchingDiv.innerHTML = data.watching.map((item) => `
-                <div class="anime-card" data-id="${item.id}">
+            watchingDiv.innerHTML = data.watching.map((item, idx) => `
+                <div class="anime-card">
                     <div class="anime-title">${escapeHtml(item.title)}</div>
                     <div class="anime-status">▶️ Начато: ${item.startDate || item.addedDate}</div>
                     <div class="card-buttons">
-                        <button class="btn-primary" onclick="completeAnime(${item.id})">✅ Завершить</button>
-                        <button class="btn-danger" onclick="deleteAnime('watching', ${item.id})">🗑 Удалить</button>
+                        <button class="btn-primary" onclick="completeAnime(${idx})">✅ Завершить</button>
+                        <button class="btn-danger" onclick="deleteAnime('watching', ${idx})">🗑 Удалить</button>
                     </div>
                 </div>
             `).join('');
@@ -467,52 +282,41 @@
         // Просмотрено
         const completedDiv = document.getElementById('completed-list');
         if (data.completed.length === 0) {
-            completedDiv.innerHTML = '<div class="empty-state"><span>✅</span><br>Здесь будут просмотренные аниме</div>';
+            completedDiv.innerHTML = '<div class="empty-state"><span>✅</span><br>Здесь будут просмотренные</div>';
         } else {
-            completedDiv.innerHTML = data.completed.map((item) => `
-                <div class="anime-card" data-id="${item.id}">
+            completedDiv.innerHTML = data.completed.map((item, idx) => `
+                <div class="anime-card">
                     <div class="anime-title">${escapeHtml(item.title)}</div>
                     <div class="anime-rating">⭐ ${item.rating || '?'}/10</div>
                     ${item.review ? `<div class="anime-review">💬 ${escapeHtml(item.review)}</div>` : ''}
-                    <div class="anime-status">✅ Завершено: ${item.completedDate || item.addedDate}</div>
+                    <div class="anime-status">✅ Завершено: ${item.completedDate}</div>
                     <div class="card-buttons">
-                        <button class="btn-danger" onclick="deleteAnime('completed', ${item.id})">🗑 Удалить</button>
+                        <button class="btn-danger" onclick="deleteAnime('completed', ${idx})">🗑 Удалить</button>
                     </div>
                 </div>
             `).join('');
         }
     }
     
-    // Перемещение в "Смотрю"
-    window.moveToWatching = async (id) => {
+    window.moveToWatching = async (idx) => {
         const data = await loadData();
-        const index = data.plan.findIndex(i => i.id === id);
-        if (index === -1) return;
-        
-        const anime = data.plan[index];
-        data.watching.push({
-            ...anime,
-            startDate: new Date().toLocaleString('ru-RU')
-        });
-        data.plan.splice(index, 1);
+        const anime = data.plan[idx];
+        data.watching.push({ ...anime, startDate: new Date().toLocaleString('ru-RU') });
+        data.plan.splice(idx, 1);
         await saveData(data);
-        showToast(`🎬 "${anime.title}" — теперь в процессе!`);
+        showToast(`🎬 "${anime.title}" — в процессе!`);
     };
     
-    // Завершение
-    window.completeAnime = async (id) => {
+    window.completeAnime = async (idx) => {
         const data = await loadData();
-        const index = data.watching.findIndex(i => i.id === id);
-        if (index === -1) return;
+        const anime = data.watching[idx];
         
-        const anime = data.watching[index];
-        
-        let rating = prompt('⭐ Оцени аниме от 1 до 10:', '8');
+        let rating = prompt('⭐ Оценка от 1 до 10:', '8');
         while (rating && (isNaN(rating) || rating < 1 || rating > 10)) {
-            rating = prompt('Оценка должна быть от 1 до 10:', '8');
+            rating = prompt('Оценка от 1 до 10:', '8');
         }
         
-        const review = prompt('✍️ Напиши своё мнение:', '');
+        const review = prompt('✍️ Твоё мнение:', '');
         
         data.completed.push({
             ...anime,
@@ -520,36 +324,30 @@
             review: review || 'Без отзыва',
             completedDate: new Date().toLocaleString('ru-RU')
         });
-        data.watching.splice(index, 1);
+        data.watching.splice(idx, 1);
         await saveData(data);
         showToast(`✅ "${anime.title}" в просмотренных!`);
     };
     
-    // Удаление
-    window.deleteAnime = async (list, id) => {
+    window.deleteAnime = async (list, idx) => {
         const data = await loadData();
-        const index = data[list].findIndex(i => i.id === id);
-        if (index === -1) return;
-        
-        const title = data[list][index].title;
-        data[list].splice(index, 1);
+        const title = data[list][idx].title;
+        data[list].splice(idx, 1);
         await saveData(data);
         showToast(`🗑 "${title}" удалено`);
     };
     
-    // Обработчики
-    document.getElementById('search-btn').addEventListener('click', doSearch);
-    document.getElementById('search-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') doSearch();
+    document.getElementById('add-btn').addEventListener('click', addAnime);
+    document.getElementById('anime-name').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') addAnime();
     });
     
-    // Вкладки
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const tabId = btn.dataset.tab;
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
         });
     });
@@ -564,10 +362,8 @@
         });
     }
     
-    window.addAnime = addAnime;
-    
     renderLists();
-    showToast('👋 Добро пожаловать! Найди аниме через поиск');
+    showToast('✏️ Введи название и нажми Добавить');
 </script>
 </body>
 </html>
