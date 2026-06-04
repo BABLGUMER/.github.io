@@ -14,7 +14,6 @@
             padding-bottom: 75px;
         }
         
-        /* Цветовая схема: фиолетовый, лаймовый, серый, оранжевый */
         :root {
             --purple: #6c63ff;
             --lime: #a8ff35;
@@ -42,6 +41,7 @@
             display: flex;
             gap: 8px;
             padding: 8px;
+            margin-bottom: 12px;
         }
         .search-box input {
             flex: 1;
@@ -60,6 +60,29 @@
             border-radius: 12px;
             color: #1a1a2e;
             font-weight: bold;
+            cursor: pointer;
+        }
+        
+        /* Кнопки быстрого добавления */
+        .quick-add-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .quick-plan {
+            background: var(--purple);
+            flex: 1;
+            padding: 10px;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .quick-completed {
+            background: var(--orange);
+            flex: 1;
+            padding: 10px;
+            border-radius: 12px;
+            text-align: center;
             cursor: pointer;
         }
         
@@ -90,8 +113,22 @@
         .search-info { flex: 1; }
         .search-title { font-weight: bold; font-size: 15px; margin-bottom: 4px; }
         .search-details { font-size: 11px; opacity: 0.7; }
+        .search-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            justify-content: center;
+        }
+        .search-actions button {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            border: none;
+            cursor: pointer;
+        }
+        .action-plan { background: var(--purple); color: white; }
+        .action-completed { background: var(--orange); color: white; }
         
-        /* Вкладки */
         .tabs {
             display: flex;
             position: fixed;
@@ -124,7 +161,6 @@
         .tab-content { display: none; padding: 0 16px 80px; }
         .tab-content.active { display: block; }
         
-        /* Карточки аниме */
         .anime-card {
             background: var(--gray);
             border-radius: 20px;
@@ -174,7 +210,6 @@
             font-size: 22px;
             cursor: pointer;
             color: #555;
-            transition: 0.1s;
         }
         .star.active { color: var(--orange); }
         .card-buttons { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
@@ -191,13 +226,11 @@
         .btn-danger { background: #ff4757; color: white; }
         .btn-secondary { background: var(--purple); color: white; }
         
-        /* Сортировка */
         .sort-bar {
             display: flex;
             gap: 10px;
             margin-bottom: 16px;
             flex-wrap: wrap;
-            align-items: center;
         }
         .sort-btn {
             background: var(--gray);
@@ -229,7 +262,6 @@
         }
         .empty-state span { font-size: 48px; display: block; margin-bottom: 12px; }
         
-        /* Модальное окно для оценки */
         .modal {
             position: fixed;
             top: 0;
@@ -270,7 +302,6 @@
         .modal-buttons { display: flex; gap: 10px; margin-top: 16px; }
         .modal-buttons button { flex: 1; padding: 12px; border-radius: 12px; border: none; cursor: pointer; }
         
-        /* Статистика */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -303,6 +334,16 @@
             transition: 0.3s;
             pointer-events: none;
         }
+        
+        .share-btn {
+            background: var(--purple);
+            color: white;
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: 16px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -331,7 +372,6 @@
     <div class="sort-bar">
         <button class="sort-btn active" data-sort="date">📅 По дате</button>
         <button class="sort-btn" data-sort="name">🔤 По названию</button>
-        <button class="sort-btn" data-sort="genre">🎭 По жанру</button>
     </div>
     <button id="randomPlanBtn" class="random-btn">🎲 Случайное аниме из планов</button>
     <div id="planList"></div>
@@ -348,6 +388,7 @@
         <button class="sort-btn" data-sort="date">📅 По дате</button>
     </div>
     <div id="completedList"></div>
+    <div class="share-btn" id="shareListBtn">📤 Поделиться списком</div>
 </div>
 
 <div id="stats" class="tab-content">
@@ -373,11 +414,11 @@
 </div>
 
 <script>
-    // ----- ХРАНЕНИЕ ДАННЫХ (localStorage + резервное копирование в JSON) -----
+    // ----- ХРАНЕНИЕ ДАННЫХ -----
     let animeData = {
-        plan: [],      // { id, title, image, description, genres, kind, episodes, addedDate }
-        watching: [],  // { ... startDate }
-        completed: []  // { ... rating, review, completedDate }
+        plan: [],
+        watching: [],
+        completed: []
     };
     
     let tempAnimeForRating = null;
@@ -402,18 +443,52 @@
     
     function saveData() {
         localStorage.setItem('anitrack_data', JSON.stringify(animeData));
-        // Экспорт в JSON файл для резервного копирования (не в облако тг, но можно сохранить)
         renderAll();
     }
     
-    // ----- ПОИСК ЧЕРЕЗ SHIKIMORI (с русскими названиями и жанрами) -----
+    // ----- ФУНКЦИЯ ДОБАВЛЕНИЯ (с выбором статуса) -----
+    async function addAnimeWithStatus(anime, status) {
+        if (animeData.plan.some(a => a.title === anime.title) ||
+            animeData.watching.some(a => a.title === anime.title) ||
+            animeData.completed.some(a => a.title === anime.title)) {
+            showToast(`❌ "${anime.title}" уже в списке`);
+            return false;
+        }
+        
+        const newAnime = {
+            id: Date.now(),
+            title: anime.title,
+            image: anime.image,
+            description: anime.description,
+            genres: anime.genres || [],
+            kind: anime.kind,
+            episodes: anime.episodes,
+            addedDate: new Date().toISOString()
+        };
+        
+        if (status === 'plan') {
+            animeData.plan.push(newAnime);
+            showToast(`✅ "${anime.title}" добавлен в планы!`);
+        } else if (status === 'completed') {
+            newAnime.completedDate = new Date().toISOString();
+            newAnime.rating = null;
+            newAnime.review = null;
+            animeData.completed.push(newAnime);
+            showToast(`✅ "${anime.title}" добавлен в просмотренные!`);
+        }
+        
+        saveData();
+        return true;
+    }
+    
+    // ----- ПОИСК -----
     async function searchAnime(query) {
         if (!query.trim()) return [];
         const resultsDiv = document.getElementById('searchResults');
         resultsDiv.innerHTML = '<div class="empty-state" style="padding:20px;">🔍 Ищем...</div>';
         
         try {
-            const url = `https://shikimori.one/api/animes?search=${encodeURIComponent(query)}&limit=12`;
+            const url = `https://shikimori.one/api/animes?search=${encodeURIComponent(query)}&limit=15`;
             const resp = await fetch(url);
             const data = await resp.json();
             
@@ -422,7 +497,6 @@
                 return [];
             }
             
-            // Для каждого аниме подгружаем детали (жанры, описание)
             const detailed = await Promise.all(data.map(async (anime) => {
                 try {
                     const detailResp = await fetch(`https://shikimori.one/api/animes/${anime.id}`);
@@ -451,11 +525,15 @@
             }));
             
             resultsDiv.innerHTML = detailed.map(anime => `
-                <div class="search-item" onclick='addToPlan(${JSON.stringify(anime).replace(/'/g, "&#39;")})'>
+                <div class="search-item">
                     ${anime.image ? `<img class="search-img" src="${anime.image}" onerror="this.style.display='none'">` : '<div class="search-img" style="display:flex;align-items:center;justify-content:center;">🎬</div>'}
                     <div class="search-info">
                         <div class="search-title">${escapeHtml(anime.title)}</div>
                         <div class="search-details">${anime.kind || '?'} • ${anime.episodes || '?'} серий • ★ ${anime.score || '?'}</div>
+                    </div>
+                    <div class="search-actions">
+                        <button class="action-plan" onclick='addWithStatus(${JSON.stringify(anime).replace(/'/g, "&#39;")}, "plan")'>📋 В планы</button>
+                        <button class="action-completed" onclick='addWithStatus(${JSON.stringify(anime).replace(/'/g, "&#39;")}, "completed")'>✅ Просмотрено</button>
                     </div>
                 </div>
             `).join('');
@@ -466,44 +544,24 @@
         }
     }
     
-    // ----- ДОБАВЛЕНИЕ В ПЛАНЫ -----
-    window.addToPlan = function(anime) {
-        if (animeData.plan.some(a => a.title === anime.title) ||
-            animeData.watching.some(a => a.title === anime.title) ||
-            animeData.completed.some(a => a.title === anime.title)) {
-            showToast(`❌ "${anime.title}" уже в списке`);
-            return;
-        }
-        
-        animeData.plan.push({
-            id: Date.now(),
-            title: anime.title,
-            image: anime.image,
-            description: anime.description,
-            genres: anime.genres || [],
-            kind: anime.kind,
-            episodes: anime.episodes,
-            addedDate: new Date().toISOString()
-        });
-        
-        saveData();
-        showToast(`✅ "${anime.title}" добавлен в планы!`);
+    window.addWithStatus = function(anime, status) {
+        addAnimeWithStatus(anime, status);
         document.getElementById('searchInput').value = '';
         document.getElementById('searchResults').innerHTML = '';
     };
     
-    // ----- РУЧНОЕ ДОБАВЛЕНИЕ (если поиск не нашёл) -----
-    function manualAdd() {
+    // ----- РУЧНОЕ ДОБАВЛЕНИЕ -----
+    function manualAdd(status) {
         const title = prompt('Введи название аниме:');
         if (title && title.trim()) {
-            addToPlan({
+            addAnimeWithStatus({
                 id: Date.now(),
                 title: title.trim(),
                 image: null,
                 description: 'Добавлено вручную',
                 genres: [],
                 kind: 'TV'
-            });
+            }, status);
         }
     }
     
@@ -521,55 +579,37 @@
         showToast(`🎬 "${anime.title}" — теперь смотрю!`);
     };
     
-    window.openRatingModal = function(id) {
-        tempAnimeForRating = id;
+    window.openRatingModal = function(id, from = 'watching') {
+        tempAnimeForRating = { id, from };
         tempStars = 0;
         const modal = document.getElementById('ratingModal');
         const starsDiv = document.getElementById('modalStars');
         starsDiv.innerHTML = '';
         for (let i = 1; i <= 10; i++) {
             const star = document.createElement('span');
-            star.textContent = i <= 5 ? '★' : '☆';
+            star.textContent = '☆';
             star.style.fontSize = '28px';
             star.style.cursor = 'pointer';
             star.style.color = '#555';
             star.onclick = () => {
                 tempStars = i;
-                renderStars(i);
+                const stars = starsDiv.children;
+                for (let s = 0; s < stars.length; s++) {
+                    stars[s].textContent = (s < i) ? '★' : '☆';
+                    stars[s].style.color = (s < i) ? '#ff9f43' : '#555';
+                }
             };
             starsDiv.appendChild(star);
         }
         document.getElementById('modalReview').value = '';
         modal.classList.add('show');
-        
-        function renderStars(rating) {
-            const stars = document.getElementById('modalStars').children;
-            for (let i = 0; i < stars.length; i++) {
-                stars[i].style.color = (i < rating) ? '#ff9f43' : '#555';
-                stars[i].textContent = (i < rating) ? '★' : '☆';
-            }
-        }
     };
     
-    window.completeAnime = function(id, withRating = true) {
+    window.completeAnime = function(id) {
         const index = animeData.watching.findIndex(a => a.id === id);
         if (index === -1) return;
-        const anime = animeData.watching[index];
-        
-        if (withRating) {
-            tempAnimeForRating = { type: 'complete', index, anime };
-            openRatingModalForComplete();
-        } else {
-            animeData.completed.push({
-                ...anime,
-                rating: null,
-                review: null,
-                completedDate: new Date().toISOString()
-            });
-            animeData.watching.splice(index, 1);
-            saveData();
-            showToast(`✅ "${anime.title}" в просмотренных (оценка позже)`);
-        }
+        tempAnimeForRating = { type: 'complete', index, anime: animeData.watching[index] };
+        openRatingModalForComplete();
     };
     
     function openRatingModalForComplete() {
@@ -598,9 +638,9 @@
     }
     
     document.getElementById('modalSave').onclick = () => {
+        const review = document.getElementById('modalReview').value;
         if (tempAnimeForRating && tempAnimeForRating.type === 'complete') {
             const { index, anime } = tempAnimeForRating;
-            const review = document.getElementById('modalReview').value;
             animeData.completed.push({
                 ...anime,
                 rating: tempStars,
@@ -608,6 +648,19 @@
                 completedDate: new Date().toISOString()
             });
             animeData.watching.splice(index, 1);
+        } else if (tempAnimeForRating && tempAnimeForRating.from === 'watching') {
+            const { id } = tempAnimeForRating;
+            const index = animeData.watching.findIndex(a => a.id === id);
+            if (index !== -1) {
+                const anime = animeData.watching[index];
+                animeData.completed.push({
+                    ...anime,
+                    rating: tempStars,
+                    review: review || 'Без отзыва',
+                    completedDate: new Date().toISOString()
+                });
+                animeData.watching.splice(index, 1);
+            }
         }
         document.getElementById('ratingModal').classList.remove('show');
         saveData();
@@ -617,7 +670,7 @@
     
     document.getElementById('modalLater').onclick = () => {
         document.getElementById('ratingModal').classList.remove('show');
-        if (tempAnimeForRating && tempAnimeForRating.type === 'complete') {
+        if (tempAnimeForRating && (tempAnimeForRating.type === 'complete' || tempAnimeForRating.from === 'watching')) {
             const { index, anime } = tempAnimeForRating;
             animeData.completed.push({
                 ...anime,
@@ -643,13 +696,32 @@
     
     window.rateLater = function(id) {
         const index = animeData.completed.findIndex(a => a.id === id);
-        if (index !== -1) {
+        if (index !== -1 && !animeData.completed[index].rating) {
             tempAnimeForRating = { type: 'edit', index, anime: animeData.completed[index] };
             openRatingModalForComplete();
         }
     };
     
-    // ----- СЛУЧАЙНОЕ АНИМЕ -----
+    // ----- ПОДЕЛИТЬСЯ СПИСКОМ -----
+    function shareList() {
+        const listText = animeData.completed.map(a => `• ${a.title} — ⭐ ${a.rating || '?'}/10 — ${a.review || 'без отзыва'}`).join('\n');
+        const message = `🎬 *Мой список просмотренных аниме:*\n\n${listText || 'Пока пусто'}\n\n📊 Всего: ${animeData.completed.length} аниме`;
+        
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tg = window.Telegram.WebApp;
+            tg.showPopup({
+                title: 'Поделиться',
+                message: 'Скопируй список и отправь другу',
+                buttons: [{ type: 'ok' }]
+            });
+            tg.showAlert(message);
+        } else {
+            navigator.clipboard.writeText(message);
+            showToast('📋 Список скопирован!');
+        }
+    }
+    
+    // ----- СЛУЧАЙНОЕ -----
     function randomFromPlan() {
         if (animeData.plan.length === 0) {
             showToast('📭 В планах ничего нет!');
@@ -671,15 +743,13 @@
             sorted.sort((a, b) => new Date(b.addedDate) - new Date(a.addedDate));
         } else if (sortType === 'rating') {
             sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-        } else if (sortType === 'genre') {
-            sorted.sort((a, b) => (a.genres?.[0] || '').localeCompare(b.genres?.[0] || ''));
         }
         return sorted;
     }
     
-    // ----- ОТРИСОВКА ВСЕГО -----
+    // ----- ОТРИСОВКА -----
     function renderAll() {
-        // В планах
+        // Планы
         const planContainer = document.getElementById('planList');
         const sortedPlan = sortAnime(animeData.plan, currentPlanSort);
         if (sortedPlan.length === 0) {
@@ -718,8 +788,7 @@
                         </div>
                     </div>
                     <div class="card-buttons">
-                        <button class="btn-primary" onclick="completeAnime(${anime.id}, true)">✅ Просмотрено</button>
-                        <button class="btn-warning" onclick="completeAnime(${anime.id}, false)">⏰ Отложить</button>
+                        <button class="btn-primary" onclick="openRatingModal(${anime.id}, 'watching')">✅ Просмотрено</button>
                         <button class="btn-danger" onclick="deleteAnime('watching', ${anime.id})">🗑</button>
                     </div>
                 </div>
@@ -738,7 +807,7 @@
                         ${anime.image ? `<img class="anime-poster" src="${anime.image}" onerror="this.style.display='none'">` : '<div class="anime-poster" style="display:flex;align-items:center;justify-content:center;">🎬</div>'}
                         <div class="anime-info">
                             <div class="anime-title">${escapeHtml(anime.title)}</div>
-                            <div class="anime-rating">${anime.rating ? '⭐'.repeat(Math.floor(anime.rating/2)) + '☆'.repeat(5-Math.floor(anime.rating/2)) : '⭐ Нет оценки'}</div>
+                            <div class="anime-rating">${anime.rating ? '⭐'.repeat(Math.min(5, Math.floor(anime.rating/2))) + '☆'.repeat(Math.max(0, 5-Math.floor(anime.rating/2))) : '⭐ Нет оценки'}</div>
                             ${anime.review ? `<div class="anime-desc">💬 ${escapeHtml(anime.review)}</div>` : ''}
                         </div>
                     </div>
@@ -791,6 +860,7 @@
     // ----- СОБЫТИЯ -----
     document.getElementById('searchBtn').onclick = () => searchAnime(document.getElementById('searchInput').value);
     document.getElementById('randomPlanBtn').onclick = randomFromPlan;
+    document.getElementById('shareListBtn').onclick = shareList;
     
     document.querySelectorAll('.sort-btn[data-sort]').forEach(btn => {
         btn.onclick = () => {
@@ -820,7 +890,7 @@
     });
     
     loadData();
-    showToast('🔥 Добро пожаловать! Найди аниме через поиск');
+    showToast('🔥 Найди аниме и добавь сразу в "Просмотрено"!');
 </script>
 </body>
 </html>
