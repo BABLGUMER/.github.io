@@ -7,6 +7,17 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
+        @keyframes wave {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
         body {
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
             background: var(--tg-theme-bg-color, #1a1a2e);
@@ -91,6 +102,7 @@
             gap: 12px;
             cursor: pointer;
             transition: all 0.2s;
+            animation: fadeIn 0.3s ease;
         }
         .search-item:active { transform: scale(0.98); }
         .search-img {
@@ -158,12 +170,12 @@
             margin-bottom: 16px;
             cursor: pointer;
             transition: 0.2s;
+            animation: fadeIn 0.3s ease;
         }
         .anime-card:active { transform: scale(0.98); }
         .anime-header {
             display: flex;
             gap: 15px;
-            margin-bottom: 12px;
         }
         .anime-poster {
             width: 80px;
@@ -181,7 +193,7 @@
             margin: 8px 0;
         }
         .genre-tag {
-            background: rgba(108, 99, 255, 0.3);
+            background: rgba(168, 255, 53, 0.2);
             padding: 4px 10px;
             border-radius: 20px;
             font-size: 10px;
@@ -203,8 +215,12 @@
             font-size: 22px;
             cursor: pointer;
             color: #555;
+            transition: 0.1s;
         }
-        .star.active { color: var(--orange); }
+        .star.active { color: var(--lime); }
+        .star.wave {
+            animation: wave 0.3s ease;
+        }
         .card-buttons { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
         .card-buttons button {
             padding: 8px 16px;
@@ -262,7 +278,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0,0,0,0.95);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -285,11 +301,29 @@
             max-width: 400px;
             max-height: 90vh;
             overflow-y: auto;
+            position: relative;
         }
-        .modal-content h3 { margin-bottom: 16px; color: var(--lime); }
+        .modal-close-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 32px;
+            height: 32px;
+            background: #ff4757;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: none;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .modal-content h3 { margin-bottom: 16px; color: var(--lime); padding-right: 30px; }
         .modal-poster {
             width: 100%;
-            max-height: 200px;
+            max-height: 250px;
             object-fit: cover;
             border-radius: 16px;
             margin-bottom: 16px;
@@ -308,7 +342,6 @@
         .modal-buttons button { flex: 1; padding: 12px; border-radius: 12px; border: none; cursor: pointer; }
         .modal-save { background: var(--lime); color: #1a1a2e; }
         .modal-later { background: var(--orange); color: #1a1a2e; }
-        .modal-close { background: var(--purple); color: white; }
         
         /* Модальное окно подтверждения */
         .confirm-modal {
@@ -444,6 +477,7 @@
 <!-- Модальное окно для карточки аниме -->
 <div id="animeModal" class="modal">
     <div class="modal-content">
+        <button class="modal-close-btn" id="modalCloseBtn">✕</button>
         <img id="modalPoster" class="modal-poster" src="">
         <h3 id="modalTitle"></h3>
         <div id="modalGenres" class="anime-genres"></div>
@@ -454,7 +488,6 @@
             <button id="modalSaveBtn" class="modal-save">💾 Сохранить</button>
             <button id="modalLaterBtn" class="modal-later">⏰ Позже</button>
         </div>
-        <button id="modalCloseBtn" class="modal-close" style="margin-top: 12px; width: 100%;">Закрыть</button>
     </div>
 </div>
 
@@ -498,33 +531,55 @@
         renderAll();
     }
     
-    // Преобразование оценки 1-10 в звёзды (половинки)
-    function ratingToStars(rating) {
-        if (!rating) return '';
-        const fullStars = Math.floor(rating / 2);
-        const halfStar = rating % 2;
-        let stars = '★'.repeat(fullStars);
-        if (halfStar) stars += '½';
-        stars += '☆'.repeat(5 - fullStars - (halfStar ? 1 : 0));
-        return stars;
+    // Анимация волны на звезде
+    function animateStar(starElement) {
+        starElement.classList.add('wave');
+        setTimeout(() => starElement.classList.remove('wave'), 300);
     }
     
-    // Отображение звезд для выбора (1-10)
+    // Преобразование оценки 1-10 в звёзды (лаймовые)
+    function ratingToStars(rating) {
+        if (!rating) return '';
+        const fullStars = Math.floor(rating);
+        const emptyStars = 10 - fullStars;
+        return '★'.repeat(fullStars) + '☆'.repeat(emptyStars);
+    }
+    
+    // Отображение звезд для выбора (1-10, лаймовые)
     function renderStarSelector(container, currentRating, onStarClick) {
         container.innerHTML = '';
         for (let i = 1; i <= 10; i++) {
             const star = document.createElement('span');
-            star.textContent = i <= 5 ? '★' : '☆';
+            star.textContent = '★';
             star.style.fontSize = '28px';
             star.style.cursor = 'pointer';
-            star.style.color = (currentRating && i <= currentRating) ? '#ff9f43' : '#555';
-            star.onclick = () => onStarClick(i);
+            star.style.color = (currentRating && i <= currentRating) ? '#a8ff35' : '#555';
+            star.style.transition = '0.1s';
+            star.onclick = () => {
+                animateStar(star);
+                onStarClick(i);
+            };
             container.appendChild(star);
         }
     }
     
-    // Открытие карточки аниме
-    function openAnimeCard(anime, listName) {
+    // Получение полных данных аниме из Shikimori по ID
+    async function fetchAnimeDetails(animeId) {
+        try {
+            const response = await fetch(`https://shikimori.one/api/animes/${animeId}`);
+            const detail = await response.json();
+            return {
+                description: (detail.description_html || detail.description || '').replace(/<[^>]*>/g, '').slice(0, 500),
+                genres: detail.genres?.map(g => g.russian || g.name) || [],
+                image: detail.image?.original || detail.image?.preview
+            };
+        } catch(e) {
+            return { description: '', genres: [], image: null };
+        }
+    }
+    
+    // Открытие карточки аниме (чисто для просмотра и оценки)
+    async function openAnimeCard(anime, listName) {
         currentModalAnime = anime;
         currentModalList = listName;
         tempStars = anime.rating || 0;
@@ -540,7 +595,7 @@
         const starsDiv = document.getElementById('modalRatingStars');
         renderStarSelector(starsDiv, tempStars, (rating) => {
             tempStars = rating;
-            renderStarSelector(starsDiv, tempStars, (r) => { tempStars = r; renderStarSelector(starsDiv, tempStars, arguments.callee); });
+            renderStarSelector(starsDiv, tempStars, arguments.callee);
         });
         
         document.getElementById('modalReviewInput').value = anime.review || '';
@@ -569,7 +624,7 @@
         showToast(`⭐ Оценка сохранена!`);
     }
     
-    // Добавление аниме
+    // Добавление аниме с полными данными
     async function addAnimeWithStatus(anime, status) {
         if (animeData.plan.some(a => a.title === anime.title) ||
             animeData.watching.some(a => a.title === anime.title) ||
@@ -578,14 +633,21 @@
             return false;
         }
         
+        // Получаем полные данные если есть ID
+        let fullData = {};
+        if (anime.id) {
+            fullData = await fetchAnimeDetails(anime.id);
+        }
+        
         const newAnime = {
             id: Date.now(),
             title: anime.title,
-            image: anime.image,
-            description: anime.description,
-            genres: anime.genres || [],
+            image: anime.image || fullData.image,
+            description: anime.description || fullData.description,
+            genres: anime.genres || fullData.genres || [],
             kind: anime.kind,
             episodes: anime.episodes,
+            shikimoriId: anime.id,
             addedDate: new Date().toISOString()
         };
         
@@ -598,7 +660,6 @@
             newAnime.review = null;
             animeData.completed.push(newAnime);
             showToast(`✅ "${anime.title}" добавлен в просмотренные!`);
-            openAnimeCard(newAnime, 'completed');
         }
         
         saveData();
@@ -830,6 +891,7 @@
                         ${anime.image ? `<img class="anime-poster" src="${anime.image}" onerror="this.style.display='none'">` : '<div class="anime-poster" style="display:flex;align-items:center;justify-content:center;">🎬</div>'}
                         <div class="anime-info">
                             <div class="anime-title">${escapeHtml(anime.title)}</div>
+                            <div class="anime-genres">${(anime.genres || []).slice(0,3).map(g => `<span class="genre-tag">${escapeHtml(g)}</span>`).join('')}</div>
                             <div class="anime-rating">${ratingToStars(anime.rating)} (${anime.rating || '?'}/10)</div>
                             ${anime.review ? `<div class="anime-desc">💬 ${escapeHtml(anime.review.slice(0, 60))}...</div>` : ''}
                         </div>
@@ -843,18 +905,19 @@
         
         // Статистика
         const statsGrid = document.getElementById('statsGrid');
-        const avgRating = animeData.completed.filter(c => c.rating).reduce((a,b) => a + (b.rating || 0), 0) / (animeData.completed.filter(c => c.rating).length || 1);
+        const ratedAnime = animeData.completed.filter(c => c.rating);
+        const avgRating = ratedAnime.reduce((a,b) => a + (b.rating || 0), 0) / (ratedAnime.length || 1);
         
         statsGrid.innerHTML = `
             <div class="stat-card"><div class="stat-number">${animeData.plan.length}</div><div class="stat-label">В планах</div></div>
             <div class="stat-card"><div class="stat-number">${animeData.watching.length}</div><div class="stat-label">Смотрю</div></div>
             <div class="stat-card"><div class="stat-number">${animeData.completed.length}</div><div class="stat-label">Просмотрено</div></div>
-            <div class="stat-card"><div class="stat-number">${animeData.completed.filter(c => c.rating).length}</div><div class="stat-label">Оценено</div></div>
+            <div class="stat-card"><div class="stat-number">${ratedAnime.length}</div><div class="stat-label">Оценено</div></div>
         `;
         
         document.getElementById('topList').innerHTML = `
             <div class="stat-card" style="margin-bottom:12px;"><div class="stat-number">${avgRating.toFixed(1)}</div><div class="stat-label">Средняя оценка</div></div>
-            ${animeData.completed.filter(c => c.rating).sort((a,b) => (b.rating || 0) - (a.rating || 0)).slice(0,5).map(a => `
+            ${ratedAnime.sort((a,b) => (b.rating || 0) - (a.rating || 0)).slice(0,5).map(a => `
                 <div class="top-list">${escapeHtml(a.title)} ${ratingToStars(a.rating)} (${a.rating}/10)</div>
             `).join('') || '<div class="empty-state">Нет оценённых аниме</div>'}
         `;
